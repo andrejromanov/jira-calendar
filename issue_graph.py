@@ -1,6 +1,4 @@
 import html
-import os
-import tempfile
 from typing import List
 
 from graphviz import Digraph
@@ -18,13 +16,26 @@ class IssueGraph:
         self.graph.node_attr.update(shape='box')
         self.graph.graph_attr.update(rankdir='LR')
 
-    def add_issue(self, id_: str, summary: str, points: str, status: str, labels: List[str] = ()):
+    def add_issue(
+        self,
+        id_: str,
+        summary: str,
+        points: str,
+        status: str,
+        sprint_names: List[str],
+        labels: List[str] = (),
+    ):
         short_summary = summary[:50] if summary else ''
         escaped_short_summary = html.escape(short_summary)
         first_line = f'<b>{id_}</b>'
         for label in labels:
             first_line += ' ' + self.issue_labels_html.get(label, label)
         node_label = f'{first_line}<br/>{escaped_short_summary}'
+        if sprint_names:
+            formatted_sprints_names = ', '.join(sprint_names)
+            node_label += f'<br/>Sprints: {formatted_sprints_names}'
+        else:
+            node_label += f'<br/><b><font color="#ff0000">No sprint</font></b>'
         if points:
             node_label += f'<br/>Story points: {int(points)}'
         else:

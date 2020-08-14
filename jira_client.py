@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 from collections import defaultdict
 from typing import List
 
@@ -50,6 +51,23 @@ def is_subtask(issue) -> bool:
     return issue.fields.issuetype.name.startswith('Sub')
 
 
+sprint_name_regexp = re.compile(r'name=(.+?),')
+
+
+def get_sprints_names(issue: Issue) -> List[str]:
+    raw_sprints = getattr(issue.fields, 'customfield_10007', None)
+    if not raw_sprints:
+        return []
+
+    sprints_names = []
+    for raw_sprint in raw_sprints:
+        match = sprint_name_regexp.search(raw_sprint)
+        if not match:
+            continue
+        sprint_name = match.group(1)
+        sprints_names.append(sprint_name)
+    return sprints_names
+
 bugs = [issue for issue in issues if is_bug(issue) and not is_closed(issue)]
 total_bugs = len([issue for issue in issues if is_bug(issue)])
 issues = [issue for issue in issues if not is_subtask(issue) and not is_bug(issue)]
@@ -69,11 +87,13 @@ while len(issues) > 0:
     if story_points:
         total_points += int(story_points)
     status_name = issue.fields.status.name
+    sprint_names = get_sprints_names(issue)
     issue_graph.add_issue(
         issue.key,
         summary=issue.fields.summary,
         points=story_points,
         status=status_name,
+        sprint_names=sprint_names,
         labels=issue.fields.labels,
     )
     gantt_chart.add_task(issue.key, issue.key, int(story_points or '0'), issue.fields.labels)
